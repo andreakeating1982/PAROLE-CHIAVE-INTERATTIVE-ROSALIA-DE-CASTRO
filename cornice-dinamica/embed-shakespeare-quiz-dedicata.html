@@ -1,5 +1,5 @@
 <!-- ============================================================
-     CORNICE DINAMICA — PAROLE CHIAVE INTERATTIVE (embed DEDICATO · v3 impermeabile + anti-loop)
+     CORNICE DINAMICA — PAROLE CHIAVE INTERATTIVE (embed DEDICATO · v4 impermeabile + anti-loop + anti-tremolio)
      ------------------------------------------------------------
      ⭐ Versione DEDICATA: serve SOLO «Parole Chiave Interattive».
         Nessun parametro, nessun riuso per altre app: URL, colori,
@@ -240,7 +240,7 @@
     <button class="lf-retry" type="button" hidden>Riprova</button>
   </div>
 
-  <iframe class="lf-iframe" loading="lazy" title="Parole Chiave Interattive — app in cornice" src="about:blank"></iframe>
+  <iframe class="lf-iframe" title="Parole Chiave Interattive — app in cornice" src="about:blank"></iframe>
 </div>
 
 <script>
@@ -329,6 +329,7 @@
 
     function applicaAltezza(h) {
       if (typeof h !== 'number' || h < 100 || h > 15000) return;   // sanity assoluta
+      if (!appViva) segnaOnline();   // FIX v3.1: prova di vita = messaggio valido, anche se l'altezza non cambia
 
       // Debounce: applica solo a layout stabilizzato (l'app smette di inviare
       // per ~300 ms → il valore è definitivo). Durante una crescita
@@ -338,8 +339,8 @@
       timerSettle = setTimeout(function () {
         if (Math.abs(h - altezzaApplicata) < 2) return;   // già applicato
         altezzaApplicata = h;
+        ultimaApplicazione = Date.now();
         iframe.style.height = h + 'px';
-        if (!appViva) segnaOnline();
       }, 300);
     }
     window.addEventListener('message', function (e) {
@@ -367,6 +368,11 @@
       } catch (err) { /* app non ancora pronta: si riprova al prossimo tick */ }
     }
     ping();
+    // Ogni 3 s: il ping è la RETE DI RECOVERY — se un messaggio di altezza
+    // cade nella finestra di silenzio post-applicazione o si perde, il ping
+    // forza l'app a rinviare il valore corrente (l'app risponde sempre ai
+    // ping; i valori identici vengono scartati dal filtro ±2 px, quindi il
+    // ping non produce mai movimento visivo).
     setInterval(ping, 3000);
 
     /* Alla finestra che cambia larghezza l'app può cambiare altezza: la richiediamo */
@@ -378,7 +384,7 @@
       clearTimeout(timerErrore);
       stato.classList.remove('errore');
       retry.hidden = true;
-      statoT.textContent = 'App online — buon lavoro!';
+      statoT.textContent = 'App online \u2014 buon lavoro!'   // FIX v3.2: escape unicode = immune all'encoding dell'editor;
       stato.classList.add('visibile');
       setTimeout(function () { stato.classList.remove('visibile'); }, 3000);
     }
@@ -387,15 +393,17 @@
       if (appViva) return;
       stato.classList.add('errore');
       retry.hidden = false;
-      statoT.textContent = 'L\'app non è raggiungibile. Controlla la connessione e riprova.';
+      statoT.textContent = 'L\'app non \u00E8 raggiungibile. Controlla la connessione e riprova.';
       stato.classList.add('visibile');
     }
 
     function ricarica() {
       appViva = false;
+      altezzaApplicata = 0;  // FIX v3.1: riparti pulito
+      if (timerSettle) { clearTimeout(timerSettle); timerSettle = null; }  // FIX v3.1: nessun debounce in sospeso
       stato.classList.remove('errore');
       retry.hidden = true;
-      statoT.textContent = 'Caricamento…';
+      statoT.textContent = 'Caricamento\u2026';
       stato.classList.add('visibile');
       iframe.src = APP_URL + (APP_URL.indexOf('?') >= 0 ? '&' : '?') + 'cornice=' + token;
       clearTimeout(timerErrore);
