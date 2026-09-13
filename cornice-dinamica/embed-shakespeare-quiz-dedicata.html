@@ -326,10 +326,16 @@
        ignorati.                                                       */
     var altezzaApplicata = 0;     // ultima altezza applicata all'iframe
     var timerSettle = null;       // debounce: applica a layout stabilizzato
+    var ultimaApplicazione = 0;   // timestamp: inizio del silenzio post-applicazione (anti-tremolio)
 
     function applicaAltezza(h) {
       if (typeof h !== 'number' || h < 100 || h > 15000) return;   // sanity assoluta
       if (!appViva) segnaOnline();   // FIX v3.1: prova di vita = messaggio valido, anche se l'altezza non cambia
+      // --- SILENZIO POST-APPLICAZIONE (anti-tremolio): nei 300 ms dopo
+      // aver applicato un'altezza ignoriamo le rimisure ravvicinate: sono
+      // le misure intermedie di stabilizzazione e alimentavano un ciclo
+      // continuo di ±pochi pixel. Un cambiamento VERO (≥ 30 px) passa. ---
+      if (ultimaApplicazione > 0 && Date.now() - ultimaApplicazione < 300 && Math.abs(h - altezzaApplicata) < 30) return;
 
       // Debounce: applica solo a layout stabilizzato (l'app smette di inviare
       // per ~300 ms → il valore è definitivo). Durante una crescita
